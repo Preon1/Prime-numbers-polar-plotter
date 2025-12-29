@@ -16,6 +16,8 @@ This program uses multiple threads to efficiently find prime numbers up to a spe
 - **Configurable rendering**: Adjust image size, display radius, and point size for different visual effects
 - **Gradient drawing**: Points grow larger toward the edge and use gradient rendering for smooth appearance
 
+![showcase in motion](./example.gif)
+
 ## Usage
 
 Compile:  
