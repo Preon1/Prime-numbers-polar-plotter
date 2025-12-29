@@ -1,6 +1,7 @@
 .DS_Store
 *.png
 *.mp4
-/target/flycheck0
-/target/debug
+*.d
+/target/flycheck0/**
+/target/debug/**
 primes.rs
