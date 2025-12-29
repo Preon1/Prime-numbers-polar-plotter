@@ -2,6 +2,48 @@ use std::time::Instant;
 use std::thread;
 use std::sync::{Arc, Mutex};
 use image::{ImageBuffer, Rgb};
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(name = "primes_mt_plot")]
+#[command(about = "Multi-threaded prime number polar plot generator", long_about = None)]
+struct Args {
+    /// Time limit in seconds for prime generation
+    #[arg(short = 'l', long, default_value_t = 600.0)]
+    time_limit: f64,
+
+    /// Image size in pixels (width and height)
+    #[arg(short = 's', long, default_value_t = 1000)]
+    image_size: u32,
+
+    /// Maximum radius for the polar plot
+    #[arg(short = 'r', long, default_value_t = 100000.0)]
+    max_radius: f64,
+
+    /// Pixel growth factor based on distance
+    #[arg(short = 'g', long, default_value_t = 5.0)]
+    pixel_grow: f64,
+
+    /// Number of threads (0 = auto-detect)
+    #[arg(short = 't', long, default_value_t = 0)]
+    threads: usize,
+
+    /// Coloring mode: 0=white, 1=paired neighbors, 2+=by last digit
+    #[arg(short = 'c', long, default_value_t = 0)]
+    colored: i8,
+
+    /// Center bias X coordinate
+    #[arg(short = 'x', long, default_value_t = 0.0)]
+    center_bias_x: f64,
+
+    /// Center bias Y coordinate
+    #[arg(short = 'y', long, default_value_t = 0.0)]
+    center_bias_y: f64,
+
+    /// Fixed pixel size (overrides pixel_grow when != 1.0)
+    #[arg(short = 'f', long, default_value_t = 1.0)]
+    pixel_fixed_size: f64,
+}
 
 fn pretty_print_int(i: u64) -> String {
     let mut s = String::new();
@@ -30,61 +72,17 @@ fn is_prime(n:&u64)->bool{
 }
 
 fn main(){
-	let args: Vec<String> = std::env::args().collect();
-	let time_limit = if args.len() > 1 {
-		args[1].parse::<f64>().unwrap_or(10.0)
-	} else {
-		10.0
-	};
+	let args = Args::parse();
 
-	let image_size = if args.len() > 2 {
-		args[2].parse::<u32>().unwrap_or(1000)
-	} else {
-		1000
-	};
-
-	let max_radius = if args.len() > 3 {
-		args[3].parse::<f64>().unwrap_or(100000.0)
-	} else {
-		100000.0
-	};
-	
-	let pixel_grow = if args.len() > 4 {
-		args[4].parse::<f64>().unwrap_or(5.0)
-	} else {
-		5.0
-	};
-
-	let threads = if args.len() > 5 {
-		args[5].parse::<usize>().unwrap_or(0)
-	} else {
-		0
-	};
-
-	// 2+ - colored, 1 - paired match, 0 - white-only
-	let colored = if args.len() > 6 {
-		args[6].parse::<i8>().unwrap_or(0)
-	} else {
-		0
-	};
-
-	let center_bias_x = if args.len() > 7 {
-		args[7].parse::<f64>().unwrap_or(0.0)
-	} else {
-		0.0
-	};
-
-	let center_bias_y = if args.len() > 8 {
-		args[8].parse::<f64>().unwrap_or(0.0)
-	} else {
-		0.0
-	};
-
-	let pixel_fixed_size = if args.len() > 9 {
-		args[9].parse::<f64>().unwrap_or(1.0)
-	} else {
-		1.0
-	};
+	let time_limit = args.time_limit;
+	let image_size = args.image_size;
+	let max_radius = args.max_radius;
+	let pixel_grow = args.pixel_grow;
+	let threads = args.threads;
+	let colored = args.colored;
+	let center_bias_x = args.center_bias_x;
+	let center_bias_y = args.center_bias_y;
+	let pixel_fixed_size = args.pixel_fixed_size;
 
 	let scale = (image_size as f64 / 2.0) / max_radius;
 	let draw_radius = max_radius * f64::sqrt(2.0) + ( center_bias_x.abs().max(center_bias_y.abs()) / scale );
