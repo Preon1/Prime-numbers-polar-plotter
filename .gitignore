@@ -8,3 +8,4 @@ target/release/.fingerprint/**
 target/release/deps/*.d
 *.TAG
 *rustc_info*
+!*example*.png

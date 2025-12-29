@@ -15,6 +15,7 @@ This program uses multiple threads to efficiently find prime numbers up to a spe
 - **Polar plot visualization**: Creates a PNG image showing primes in polar coordinates
 - **Configurable rendering**: Adjust image size, display radius, and point size for different visual effects
 - **Gradient drawing**: Points grow larger toward the edge and use gradient rendering for smooth appearance
+- **Color version**: Points might alter the color based on their last digit
 
 ![showcase in motion](./example.gif)
 
@@ -22,9 +23,7 @@ This program uses multiple threads to efficiently find prime numbers up to a spe
 
 For Windows:  
 ```bash
-.\target\release\primes_mt_plot.exe [time_limit] [image_size] [max_radius] [pixel_grow] [threads]
-```
-
+.\target\release\primes_mt_plot.exe [time_limit] [image_size] [max_radius] [pixel_grow] [threads] [colored]
 Compile for other systems (optional):  
 The compiled binary will be in `target/release/primes_mt_plot`.  
 
@@ -61,6 +60,17 @@ All arguments are optional and positional:
    - Type: integer
    - Example: `8` to use exactly 8 threads
 
+6. **colored** (default: `0`)
+   - Enable multicolor visualization (0 = white/monochrome, non-zero = colored)
+   - Type: integer
+   - Colors primes based on their last digit:
+     - Ending in 1: Cyan
+     - Ending in 3: Magenta
+     - Ending in 5: Yellow
+     - Ending in 7: Green
+     - Ending in 9: Blue
+   - Example: `1` to enable colored visualization
+
 ## Examples
 
 ### Basic usage with defaults
@@ -71,13 +81,19 @@ Runs with 10 seconds limit, creates 1000×1000 image, shows primes up to 100,000
 
 ### High-quality large visualization
 ```bash
-.\target\release\primes_mt_plot.exe 600 32000 2000000000 1
+.\target\release\primes_mt_plot.exe 600 32000 2000000000 1 0 0
 ```
 Runs with 600 seconds limit, creates 32000×32000 image, shows primes from 1 to 2_000_000_000
 
+### Colored visualization
+```bash
+.\target\release\primes_mt_plot.exe 10 1000 100000 5 0 1
+```
+Creates a colorful visualization where primes are colored by their last digit
+
 ### Fast single-pixel rendering
 ```bash
-.\target\release\primes_mt_plot.exe 10 1000 500000 1
+.\target\release\primes_mt_plot.exe 10 1000 500000 1 0 0
 ```
 Uses 1-pixel points (no gradient) for faster rendering
 
@@ -96,11 +112,11 @@ Saved polar plot to 1K_primes_78498_rad_100000_grow_5.png
 ### Image File
 A PNG file named with the format:
 ```
-{image_size}K_primes_{count}_rad_{max_radius}_grow_{pixel_grow}.png
+{image_size}K_primes_{count}_rad_{max_radius}_grow_{pixel_grow}_color_{colored}.png
 ```
 where count - how much numbers are actually rendered
 
-Example: `1K_primes_78498_rad_100000_grow_5.png`
+Example: `1K_primes_78498_rad_100000_grow_5_color_0.png`
 
 ## How It Works
 
@@ -132,3 +148,7 @@ This creates the characteristic spiral patterns known as "Ulam spirals" or "prim
 - `image` crate: For PNG generation
 - Standard library: Threading and synchronization
 
+## Colored examples
+
+![showcase](./example2.jpg)
+![showcase](./example3.png)
