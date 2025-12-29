@@ -48,7 +48,6 @@ fn main(){
 	} else {
 		100000.0
 	};
-	let draw_radius = max_radius * f64::sqrt(2.0);
 	
 	let pixel_grow = if args.len() > 4 {
 		args[4].parse::<f64>().unwrap_or(5.0)
@@ -68,6 +67,29 @@ fn main(){
 	} else {
 		0
 	};
+
+	let center_bias_x = if args.len() > 7 {
+		args[7].parse::<f64>().unwrap_or(0.0)
+	} else {
+		0.0
+	};
+
+	let center_bias_y = if args.len() > 8 {
+		args[8].parse::<f64>().unwrap_or(0.0)
+	} else {
+		0.0
+	};
+
+	let pixel_fixed_size = if args.len() > 9 {
+		args[9].parse::<f64>().unwrap_or(1.0)
+	} else {
+		1.0
+	};
+
+	let scale = (image_size as f64 / 2.0) / max_radius;
+	let draw_radius = max_radius * f64::sqrt(2.0) + ( center_bias_x.abs().max(center_bias_y.abs()) / scale );
+
+
 
 
 
@@ -142,8 +164,9 @@ fn main(){
 	println!("Generating polar plot image {}px with max radius {}...", image_size, pretty_print_int(max_radius as u64));
 	
 	let mut img = ImageBuffer::from_pixel(image_size, image_size, Rgb([0u8, 0u8, 0u8]));
-	let center = image_size as f64 / 2.0;
-	let scale = (image_size as f64 / 2.0) / max_radius;
+
+	let center_x = image_size as f64 / 2.0 + center_bias_x;
+	let center_y = image_size as f64 / 2.0 + center_bias_y;
 	let mut drawn = 0u64;
 
 	for &prime in results.iter() {
@@ -154,19 +177,19 @@ fn main(){
         let angle = prime as f64;
         let radius = prime as f64 * scale;
         
-        let x = center + radius * angle.cos();
-        let y = center + radius * angle.sin();
+        let x = center_x + radius * angle.cos();
+        let y = center_y + radius * angle.sin();
         
         if 
-        x >= 0.0
-        && x < image_size as f64
-        && y >= 0.0
-        && y < image_size as f64
+        x >= center_bias_x * scale
+        && x < image_size as f64 + center_bias_x * scale
+        && y >= center_bias_y * scale
+        && y < image_size as f64 + center_bias_y * scale
         {
 			drawn += 1u64;
 
-            let px = x as i32;
-            let py = y as i32;
+            let px = (x - center_bias_x * scale) as i32;
+            let py = (y - center_bias_y * scale) as i32;
 
 			
 			let pixel = if colored > 1 {
@@ -198,14 +221,18 @@ fn main(){
 				(255u8, 255u8, 255u8)
 			};
 
-			if pixel_grow == 1.0 {
+			if pixel_grow == 1.0 && pixel_fixed_size == 1.0 {
 				img.put_pixel(px as u32, py as u32, Rgb([pixel.0, pixel.1, pixel.2]));
 				continue;
 			}
             
             // Calculate point size based on distance from center
             let distance_ratio = radius / (image_size as f64 / 2.0);
-            let point_radius = distance_ratio * pixel_grow;
+            let point_radius = if pixel_fixed_size == 1.0 {
+				distance_ratio * pixel_grow
+			}else{
+				pixel_fixed_size
+			};
             
             // Draw circular point with gradient
             let r_int = point_radius.ceil() as i32;
@@ -243,8 +270,8 @@ fn main(){
         }
     }
 	
-	let filename = format!("{}K_primes_{}_rad_{}_grow_{}_color_{}.png",
-	image_size/1000, drawn, max_radius, pixel_grow, colored);
+	let filename = format!("{}K_primes_{}_rad_{}_grow_{}_color_{}_x_{}_y_{}.png",
+	image_size/1000, drawn, max_radius, pixel_grow, colored, center_bias_x, center_bias_y);
 	img.save(&filename).expect("Failed to save image");
 	println!("Saved polar plot to {}", filename);
 }
