@@ -21,7 +21,7 @@ This program uses multiple threads to efficiently find prime numbers up to a spe
 ## Usage
 
 Compile:  
-The compiled binary will be in `target/release/primes_mt_plot` (or `primes_mt_plot.exe` on Windows).  
+The compiled binary will be in `target/release/primes_mt_plot`.  
 
 ```bash
 cargo build --release --bin primes_mt_plot
@@ -65,19 +65,19 @@ All arguments are optional and positional:
 
 ### Basic usage with defaults
 ```bash
-primes_mt_plot
+.\target\release\primes_mt_plot.exe
 ```
 Runs with 10 seconds limit, creates 1000×1000 image, shows primes up to 100,000
 
 ### High-quality large visualization
 ```bash
-primes_mt_plot 600 32000 2000000000 1
+.\target\release\primes_mt_plot.exe 600 32000 2000000000 1
 ```
 Runs with 600 seconds limit, creates 32000×32000 image, shows primes from 1 to 2_000_000_000
 
 ### Fast single-pixel rendering
 ```bash
-primes_mt_plot 10 1000 500000 1
+.\target\release\primes_mt_plot.exe 10 1000 500000 1
 ```
 Uses 1-pixel points (no gradient) for faster rendering
 
@@ -117,7 +117,7 @@ Example: `1K_primes_78498_rad_100000_grow_5.png`
 - Larger images take longer to render, especially with high `pixel_grow` values
 - Setting `pixel_grow=1.0` speeds up image generation scipping pixel size calculation
 - Generated png images generally can be opened up to 32K-40K resolution. Larger images need specialized software to open like "vipsdisp" or others.
-- Bigger max_radius -> bigger image size -> smaller pixel_grow (down to 1). To produce visually good, not to bright and not to datk images.
+- Bigger max_radius -> bigger image size -> smaller pixel_grow (down to 1). To produce visually good, not to bright and not to dark images.
 
 ## Mathematical Background
 
