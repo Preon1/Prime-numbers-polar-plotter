@@ -62,6 +62,13 @@ fn main(){
 		0
 	};
 
+	let colored = if args.len() > 6 {
+		args[6].parse::<i8>().unwrap_or(0)
+	} else {
+		0
+	};
+
+
 
 	let num_threads = if threads == 0 {
 		thread::available_parallelism().unwrap().get()
@@ -145,12 +152,28 @@ fn main(){
         && y >= 0.0
         && y < image_size as f64
         {
-            let px = x as i32;
-            let py = y as i32;
 			drawn += 1u64;
 
+            let px = x as i32;
+            let py = y as i32;
+
+			let last_digit = (prime % 10) as u8;
+
+			let pixel = if colored != 0 {
+				match last_digit {
+					1 => (0u8, 255u8, 255u8),
+					3 => (255u8, 0u8, 255u8),
+					5 => (255u8, 255u8, 0u8),
+					7 => (0u8, 255u8, 0u8),
+					9 => (0u8, 0u8, 255u8),
+					_ => (255u8, 0u8, 0u8)
+				}
+			} else {
+				(255u8, 255u8, 255u8)
+			};
+
 			if pixel_grow == 1.0 {
-				img.put_pixel(px as u32, py as u32, Rgb([255u8, 255u8, 255u8]));
+				img.put_pixel(px as u32, py as u32, Rgb([pixel.0, pixel.1, pixel.2]));
 				continue;
 			}
             
@@ -167,15 +190,25 @@ fn main(){
                     
                     if dist_from_point <= point_radius {
                         // Calculate intensity: 1.0 at center, fades to 0.0 at edge
+
                         let intensity = 1.0 - (dist_from_point / point_radius);
-                        let brightness = (intensity * 255.0) as u8;
+                        let brightness = (
+							(intensity * pixel.0 as f64) as u8,
+							(intensity * pixel.1 as f64) as u8,
+							(intensity * pixel.2 as f64) as u8,
+						);
                         
                         let nx = px + dx;
                         let ny = py + dy;
                         if nx >= 0 && nx < image_size as i32 && ny >= 0 && ny < image_size as i32 {
                             let current = img.get_pixel(nx as u32, ny as u32);
-                            let new_brightness = current[0].max(brightness);
-                            img.put_pixel(nx as u32, ny as u32, Rgb([new_brightness, new_brightness, new_brightness]));
+							let new_brightness = (
+								current[0].max(brightness.0),
+								current[1].max(brightness.1),
+								current[2].max(brightness.2),
+							);
+
+							img.put_pixel(nx as u32, ny as u32, Rgb([new_brightness.0, new_brightness.1, new_brightness.2]));
                         }
                     }
                 }
@@ -184,8 +217,8 @@ fn main(){
         }
     }
 	
-	let filename = format!("{}K_primes_{}_rad_{}_grow_{}.png",
-	image_size/1000, drawn, max_radius, pixel_grow);
+	let filename = format!("{}K_primes_{}_rad_{}_grow_{}_color_{}.png",
+	image_size/1000, drawn, max_radius, pixel_grow, colored);
 	img.save(&filename).expect("Failed to save image");
 	println!("Saved polar plot to {}", filename);
 }
