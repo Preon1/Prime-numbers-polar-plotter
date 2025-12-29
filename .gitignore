@@ -4,4 +4,7 @@
 *.d
 target/flycheck0/**
 target/debug/**
-primes.rs
+target/release/.fingerprint/**
+target/release/deps/*.d
+*.TAG
+*rustc_info*
