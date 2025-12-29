@@ -61,15 +61,9 @@ All arguments are optional and positional:
    - Example: `8` to use exactly 8 threads
 
 6. **colored** (default: `0`)
-   - Enable multicolor visualization (0 = white/monochrome, non-zero = colored)
+   - Enable multicolor visualization (0 = white/monochrome, 1 = colored pairs, 2+ = colored on last digit basis)
    - Type: integer
-   - Colors primes based on their last digit:
-     - Ending in 1: Cyan
-     - Ending in 3: Magenta
-     - Ending in 5: Yellow
-     - Ending in 7: Green
-     - Ending in 9: Blue
-   - Example: `1` to enable colored visualization
+   - Example: `2` to enable colored visualization
 
 ## Examples
 
@@ -79,15 +73,22 @@ All arguments are optional and positional:
 ```
 Runs with 10 seconds limit, creates 1000×1000 image, shows primes up to 100,000
 
+### Twins visualisation
+```bash
+.\target\release\primes_mt_plot.exe 60 6000 10000000 5 0 1
+```
+60 seconds limit, 6K resolution 10M scale grow-factor 5 with auto mulithreading.
+Will show twins pattern. (see below)
+
 ### High-quality large visualization
 ```bash
 .\target\release\primes_mt_plot.exe 600 32000 2000000000 1 0 0
 ```
-Runs with 600 seconds limit, creates 32000×32000 image, shows primes from 1 to 2_000_000_000
+Runs with 600 seconds limit, creates 32000×32000 image, shows primes from 1 to 2B
 
 ### Colored visualization
 ```bash
-.\target\release\primes_mt_plot.exe 10 1000 100000 5 0 1
+.\target\release\primes_mt_plot.exe 10 1000 100000 5 0 2
 ```
 Creates a colorful visualization where primes are colored by their last digit
 
@@ -143,13 +144,24 @@ The visualization uses polar coordinates where:
 
 This creates the characteristic spiral patterns known as "Ulam spirals" or "prime spirals," revealing interesting structures in the distribution of prime numbers.
 
-## Dependencies
+Here is an interesting example, where pairing pattern is observed: some lines can be devided in red-only, green-only, mixed and grey.  
+How those type of lines cross a radial can also be analized as a pattern.
 
-- `image` crate: For PNG generation
-- Standard library: Threading and synchronization
+   - both neighbors: Blue
+   - trailing only: Green
+   - leading only: Red
+   - no neighbors: Grey
 
-## Some examples
+![showcase](./example5.png)
+
+## Some other examples
 Colored with high pixel grow value:
+Showing points based on last digit of a prime number:
+   - Ending in 1: Cyan
+   - Ending in 3: Magenta
+   - Ending in 5: Yellow
+   - Ending in 7: Green
+   - Ending in 9: Blue
 ![showcase](./example2.jpg)
 
 Colored on higher scale
@@ -157,3 +169,8 @@ Colored on higher scale
 
 110M prime numbers plotted white-only. Around 4 minute build time
 ![showcase](./example4.png)
+
+## Dependencies
+
+- `image` crate: For PNG generation
+- Standard library: Threading and synchronization
