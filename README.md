@@ -49,7 +49,7 @@ All arguments are optional and positional:
 3. **max_radius** (default: `100000.0`)
    - Maximum radius for visualization (determines which primes to display)
    - Type: float
-   - Example: `50000.0` means at centers of image edges, will numbers just below 50K, and in corners up to 50K*sqrt(2)
+   - Example: `50000.0` means at centers of image edges, will be numbers just below 50K, and up to 50K*sqrt(2) in corners
 
 4. **pixel_grow** (default: `5.0`)
    - Point size growth factor (larger = bigger dots toward edge)
