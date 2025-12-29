@@ -62,6 +62,7 @@ fn main(){
 		0
 	};
 
+	// 2+ - colored, 1 - paired match, 0 - white-only
 	let colored = if args.len() > 6 {
 		args[6].parse::<i8>().unwrap_or(0)
 	} else {
@@ -116,7 +117,7 @@ fn main(){
 	}
 	
 	// Aggregate results
-	let results = results.lock().unwrap();
+	let mut results = results.lock().unwrap();
 	let prime_counter = results.len() as u64;
 	let last_prime = *results.iter().max().unwrap_or(&0);
 	
@@ -126,6 +127,16 @@ fn main(){
 		start_time.elapsed().as_secs_f64(),
 		pretty_print_int(last_prime),
 	);
+
+
+
+	// if to display colored pairs - presort results vector
+	if colored == 1 {
+		println!("Sorting...");
+		results.sort();
+	}
+	let results_length = results.len();
+
 
 	// Generate polar plot
 	println!("Generating polar plot image {}px with max radius {}...", image_size, pretty_print_int(max_radius as u64));
@@ -157,10 +168,9 @@ fn main(){
             let px = x as i32;
             let py = y as i32;
 
-			let last_digit = (prime % 10) as u8;
-
-			let pixel = if colored != 0 {
-				match last_digit {
+			
+			let pixel = if colored > 1 {
+				match (prime % 10) as u8 {
 					1 => (0u8, 255u8, 255u8),
 					3 => (255u8, 0u8, 255u8),
 					5 => (255u8, 255u8, 0u8),
@@ -168,6 +178,22 @@ fn main(){
 					9 => (0u8, 0u8, 255u8),
 					_ => (255u8, 0u8, 0u8)
 				}
+			} else if colored == 1 {
+				//colored neighbors - using sorted vector
+				
+				// Binary search to find current prime's position
+				let pos = results.binary_search(&prime).unwrap();
+				
+				let trailing = pos > 0 && results[pos - 1] == prime - 2;
+				let leading = pos < results_length - 1 && results[pos + 1] == prime + 2;
+
+				match (trailing, leading) {
+					(true, true) => (0u8, 0u8, 255u8),   // both neighbors - blue
+					(true, false) => (0u8, 255u8, 0u8),  // trailing only - green
+					(false, true) => (255u8, 0u8, 0u8),  // leading only - red
+					_ => (50u8, 50u8, 50u8)           // no neighbors - grey
+				}
+
 			} else {
 				(255u8, 255u8, 255u8)
 			};
