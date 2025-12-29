@@ -148,7 +148,12 @@ This creates the characteristic spiral patterns known as "Ulam spirals" or "prim
 - `image` crate: For PNG generation
 - Standard library: Threading and synchronization
 
-## Colored examples
-
+## Some examples
+Colored with high pixel grow value:
 ![showcase](./example2.jpg)
+
+Colored with on higher scale
 ![showcase](./example3.png)
+
+110M prime numbers plotted white-only. Around 4 minute build time
+![showcase](./example4.png)
