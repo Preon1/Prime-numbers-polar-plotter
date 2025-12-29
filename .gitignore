@@ -2,6 +2,6 @@
 *.png
 *.mp4
 *.d
-/target/flycheck0/**
-/target/debug/**
+target/flycheck0/**
+target/debug/**
 primes.rs
