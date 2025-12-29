@@ -20,16 +20,16 @@ This program uses multiple threads to efficiently find prime numbers up to a spe
 
 ## Usage
 
-Compile:  
+For Windows:  
+```bash
+.\target\release\primes_mt_plot.exe [time_limit] [image_size] [max_radius] [pixel_grow] [threads]
+```
+
+Compile for other systems (optional):  
 The compiled binary will be in `target/release/primes_mt_plot`.  
 
 ```bash
 cargo build --release --bin primes_mt_plot
-```
-
-Compiled for Win x64:  
-```bash
-.\target\release\primes_mt_plot.exe [time_limit] [image_size] [max_radius] [pixel_grow] [threads]
 ```
 
 ### Command-Line Arguments
