@@ -1,6 +1,8 @@
-# Primes MT Plot
+# Prime-numbers-polar-plotter (tests)
 
 A multi-threaded Rust program that finds prime numbers and generates a polar plot visualization.
+
+![showcase](./example.jpg)
 
 ## Description
 
