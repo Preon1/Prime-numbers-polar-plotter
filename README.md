@@ -69,7 +69,7 @@ Runs with 10 seconds limit, creates 1000×1000 image, shows primes up to 100,000
 ```bash
 primes_mt_plot 600 32000 2000000000 1
 ```
-Runs with 600 seconds limit, creates 32000×32000 image, shows primes from 1 to 2_000_000
+Runs with 600 seconds limit, creates 32000×32000 image, shows primes from 1 to 2_000_000_000
 
 ### Fast single-pixel rendering
 ```bash
