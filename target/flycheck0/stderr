@@ -1,5 +1,5 @@
-   0.073952300s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint: fingerprint error for rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test)/Check { test: false }/TargetInner { name: "primes", doc: true, ..: with_path("\\\\nas\\Home\\exchange\\rust_perf_test\\src\\bin\\primes.rs", Edition2024) }
-   0.073996100s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint:     err: failed to read `\\nas\Home\exchange\rust_perf_test\target\debug\.fingerprint\rust_perf_test-1fe36b504a0d0374\bin-primes`
+   0.277823000s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint: fingerprint error for rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test)/Check { test: false }/TargetInner { name: "primes", doc: true, ..: with_path("\\\\nas\\Home\\exchange\\rust_perf_test\\src\\bin\\primes.rs", Edition2024) }
+   0.277869700s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint:     err: failed to read `\\nas\Home\exchange\rust_perf_test\target\debug\.fingerprint\rust_perf_test-1fe36b504a0d0374\bin-primes`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -26,8 +26,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.226696400s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint: fingerprint error for rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test)/Check { test: true }/TargetInner { name: "primes", doc: true, ..: with_path("\\\\nas\\Home\\exchange\\rust_perf_test\\src\\bin\\primes.rs", Edition2024) }
-   0.226722300s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint:     err: failed to read `\\nas\Home\exchange\rust_perf_test\target\debug\.fingerprint\rust_perf_test-da278b1f39c2ca1c\test-bin-primes`
+   0.646554500s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint: fingerprint error for rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test)/Check { test: true }/TargetInner { name: "primes", doc: true, ..: with_path("\\\\nas\\Home\\exchange\\rust_perf_test\\src\\bin\\primes.rs", Edition2024) }
+   0.646598500s  INFO prepare_target{force=false package_id=rust_perf_test v0.1.0 (\\nas\Home\exchange\rust_perf_test) target="primes"}: cargo::core::compiler::fingerprint:     err: failed to read `\\nas\Home\exchange\rust_perf_test\target\debug\.fingerprint\rust_perf_test-da278b1f39c2ca1c\test-bin-primes`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
