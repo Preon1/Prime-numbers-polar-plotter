@@ -152,7 +152,7 @@ This creates the characteristic spiral patterns known as "Ulam spirals" or "prim
 Colored with high pixel grow value:
 ![showcase](./example2.jpg)
 
-Colored with on higher scale
+Colored on higher scale
 ![showcase](./example3.png)
 
 110M prime numbers plotted white-only. Around 4 minute build time
