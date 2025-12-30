@@ -16,7 +16,8 @@ This program uses multiple threads to efficiently find prime numbers up to a spe
 - **Configurable rendering**: Adjust image size, display radius, and point size for different visual effects
 - **Gradient drawing**: Points grow larger toward the edge and use gradient rendering for smooth appearance
 - **Fixed-size rendering**: Option to use fixed pixel size for all points regardless of distance
-- **Center bias adjustment**: Shift the center of the polar plot to focus on specific regions
+- **Center bias adjustment**: Shift the center of the polar plot to focus on specific regions.
+In this mode program will only calculate primes within a ring, which intesects the viewport.
 - **Color modes**: Points can be colored based on last digit or twin prime relationships
 
 ![showcase in motion](./example.gif)
@@ -51,7 +52,7 @@ All arguments use named flags with short and long forms:
 |-------|------|---------|-------------|
 | `-l` | `--time-limit` | `600.0` | Time limit in seconds for prime generation |
 | `-s` | `--image-size` | `1000` | Width and height of output image in pixels |
-| `-r` | `--max-radius` | `100000.0` | Maximum radius for visualization |
+| `-r` | `--max-radius` | `100000.0` | Maximum radius for visualization. Also acts as scale: numbers range increase from center to an edge center. |
 | `-g` | `--pixel-grow` | `5.0` | Point size growth factor (larger = bigger dots toward edge) |
 | `-t` | `--threads` | `0` | Number of threads to use (0 = auto-detect) |
 | `-c` | `--colored` | `0` | Coloring mode (0=white, 1=twin pairs, 2+=last digit) |
@@ -124,10 +125,13 @@ The program produces two types of output:
 
 ### Console Output
 ```
-Starting max 600s run with 16 threads...
-Found 78 498 primes in 10.000123s. Biggest is 999 983.
-Generating polar plot image 1000px with max radius 100 000...
-Saved polar plot to 1K_primes_78498_rad_100000_grow_5_color_0_x_0_y_0.png
+Calculation boundaries: start=1 414 213, end=4 242 641 (cx=0, cy=0, h=1 000 000, scale=0.0005)
+Starting max 600s run with 15 threads...
+Found 190 994 primes in 0.0313355s: 1 414 241..4 242 619
+Sorting... [only for --color 1]
+Generating polar plot image 1000px
+Drawn 15256 points in 0.0370642s
+Saved as 1K_primes_15256_rad_1000000_grow_5_color_1_x_-1000_y_-1000.png
 ```
 
 ### Image File

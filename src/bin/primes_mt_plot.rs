@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use image::{ImageBuffer, Rgb};
 use clap::Parser;
 
+
 #[derive(Parser, Debug)]
 #[command(name = "primes_mt_plot")]
 #[command(about = "Multi-threaded prime number polar plot generator", long_about = None)]
@@ -33,11 +34,11 @@ struct Args {
     colored: i8,
 
     /// Center bias X coordinate
-    #[arg(short = 'x', long, default_value_t = 0.0)]
+    #[arg(short = 'x', long, default_value_t = 0.0, allow_hyphen_values=true)]
     center_bias_x: f64,
 
     /// Center bias Y coordinate
-    #[arg(short = 'y', long, default_value_t = 0.0)]
+    #[arg(short = 'y', long, default_value_t = 0.0, allow_hyphen_values=true)]
     center_bias_y: f64,
 
     /// Fixed pixel size (overrides pixel_grow when != 1.0)
@@ -45,7 +46,8 @@ struct Args {
     pixel_fixed_size: f64,
 }
 
-fn pretty_print_int(i: u64) -> String {
+
+fn pretty_print_int(i: usize) -> String {
     let mut s = String::new();
     let i_str = i.to_string();
     let a = i_str.chars().rev().enumerate();
@@ -55,11 +57,12 @@ fn pretty_print_int(i: u64) -> String {
         }
         s.insert(0, val);
     }
-    return s;
+    s
 }
 
-fn is_prime(n:&u64)->bool{
-	let limit = (*n as f64).sqrt() as u64 +1;
+
+fn is_prime(n:&usize)->bool{
+	let limit = (*n as f64).sqrt() as usize +1;
 	let mut divisor = 3;
 
 	while divisor <= limit {
@@ -68,8 +71,102 @@ fn is_prime(n:&u64)->bool{
 		}
 		divisor += 2;
 	}
-	return true;
+	true
 }
+
+
+// struct Coord {
+// 	x: f64,
+// 	y: f64
+// }
+
+
+/// Returns coordinates for all 
+// fn get_square_vertex(center: &Coord, half_size: &f64) -> [Coord; 4] {
+// 	[
+// 		Coord { x: center.x - half_size, y: center.y - half_size },
+// 		Coord { x: center.x + half_size, y: center.y - half_size },
+// 		Coord { x: center.x + half_size, y: center.y + half_size },
+// 		Coord { x: center.x - half_size, y: center.y + half_size },
+// 	]
+// }
+
+
+/// Evaluates if a given coordinate is inside of a given square
+// fn is_inside_square(point: &Coord, square: &[Coord; 4]) -> bool {
+// 	let mut min_x = square[0].x;
+// 	let mut max_x = square[0].x;
+// 	let mut min_y = square[0].y;
+// 	let mut max_y = square[0].y;
+
+// 	for v in square.iter().skip(1) {
+// 		if v.x < min_x { min_x = v.x; }
+// 		if v.x > max_x { max_x = v.x; }
+// 		if v.y < min_y { min_y = v.y; }
+// 		if v.y > max_y { max_y = v.y; }
+// 	}
+
+// 	point.x >= min_x && point.x <= max_x && point.y >= min_y && point.y <= max_y
+// }
+
+
+/// Calculates the length of a vector using x,y coordinates
+// fn get_vector_length(point: &Coord) -> f64 {
+// 	(point.x.powi(2) + point.y.powi(2)).sqrt()
+// }
+
+
+/// Calculates the start and end number (prime/world units) needed to cover the viewport.
+/// Inputs:
+/// - `scale`: pixels per 1.0 world unit (prime radius unit)
+/// - `offset_x_px`, `offset_y_px`: viewport center bias in pixels
+/// - `half_size_px`: half of viewport width/height in pixels (i.e., image_size/2)
+fn get_calculation_ring(
+	scale: &f64,
+	offset_x_px: &f64,
+	offset_y_px: &f64,
+	half_size_px: &f64,
+) -> [usize; 2] {
+	// Convert pixel-space viewport definition into world-space (prime radius units)
+	let cx = offset_x_px / scale;
+	let cy = offset_y_px / scale;
+	let h = half_size_px / scale;
+
+	// Exact min distance from origin to an axis-aligned square (AABB) centered at (cx, cy) with half-size h
+	let ax = cx.abs();
+	let ay = cy.abs();
+	let dx = (ax - h).max(0.0);
+	let dy = (ay - h).max(0.0);
+	let min_dist = (dx * dx + dy * dy).sqrt();
+
+	// Safe max distance: farthest corner distance
+	let max_dist = ((ax + h).powi(2) + (ay + h).powi(2)).sqrt();
+
+	// Convert to integer boundaries for prime scanning
+	let mut start = min_dist.floor() as usize;
+	if start < 3 { start = 3; }
+	// keep start odd so threaded stepping (+= 2*num_threads) stays on odds
+	if start % 2 == 0 {
+		start = start.saturating_sub(1);
+		if start < 3 { start = 3; }
+	}
+
+	let end = (max_dist.ceil() as usize).max(start);
+
+	println!(
+		"Calculation boundaries: start={}, end={} (cx={}, cy={}, h={}, scale={})",
+		pretty_print_int(start),
+		pretty_print_int(end),
+		pretty_print_int(cx as usize),
+		pretty_print_int(cy as usize),
+		pretty_print_int(h as usize),
+		scale
+	);
+
+	[start, end]
+}
+
+
 
 fn main(){
 	let args = Args::parse();
@@ -85,11 +182,12 @@ fn main(){
 	let pixel_fixed_size = args.pixel_fixed_size;
 
 	let scale = (image_size as f64 / 2.0) / max_radius;
-	let draw_radius = max_radius * f64::sqrt(2.0) + ( center_bias_x.abs().max(center_bias_y.abs()) / scale );
 
-
-
-
+	// Compute needed prime range for the current viewport (offsets are pixels; half-size is image_size/2 px)
+	let half_size_px = image_size as f64 / 2.0;
+	let boundaries = get_calculation_ring(&scale, &center_bias_x, &center_bias_y, &half_size_px);
+	let calc_start = boundaries[0];
+	let draw_radius = boundaries[1];
 
 	let num_threads = if threads == 0 {
 		thread::available_parallelism().unwrap().get()
@@ -107,11 +205,11 @@ fn main(){
 	
 	for i in 0..num_threads {
 		let results_clone = Arc::clone(&results);
-		let step = (2 * num_threads) as u64;
+		let step = 2 * num_threads;
 		
 		let handle = thread::spawn(move || {
 			let mut primes = Vec::new();
-			let mut n = (3 + 2 * i) as u64;
+			let mut n = calc_start + 2 * i;
 			
 			let start_time_clone = Instant::now();
 			while start_time_clone.elapsed().as_secs_f64() < time_limit {
@@ -121,7 +219,7 @@ fn main(){
 
 				n += step;
 
-				if n as f64 > draw_radius{ break; }
+				if n > draw_radius{ break; }
 			}
 			
 			let mut results = results_clone.lock().unwrap();
@@ -138,13 +236,15 @@ fn main(){
 	
 	// Aggregate results
 	let mut results = results.lock().unwrap();
-	let prime_counter = results.len() as u64;
+	let prime_counter = results.len();
+	let first_prime = *results.iter().min().unwrap_or(&0);
 	let last_prime = *results.iter().max().unwrap_or(&0);
 	
 	println!(
-		"Found {} primes in {}s. Biggest is {}.",
+		"Found {} primes in {}s: {}..{}",
 		pretty_print_int(prime_counter),
 		start_time.elapsed().as_secs_f64(),
+		pretty_print_int(first_prime),
 		pretty_print_int(last_prime),
 	);
 
@@ -159,19 +259,17 @@ fn main(){
 
 
 	// Generate polar plot
-	println!("Generating polar plot image {}px with max radius {}...", image_size, pretty_print_int(max_radius as u64));
+	println!("Generating polar plot image {}px", image_size);
 	
 	let mut img = ImageBuffer::from_pixel(image_size, image_size, Rgb([0u8, 0u8, 0u8]));
 
 	let center_x = image_size as f64 / 2.0 + center_bias_x;
 	let center_y = image_size as f64 / 2.0 + center_bias_y;
-	let mut drawn = 0u64;
+	let mut pixel = (255u8, 255u8, 255u8);
+	let mut drawn = 0;
+	let start_draw_time = Instant::now();
 
 	for &prime in results.iter() {
-        if prime as f64 > draw_radius {
-            continue;
-        }
-        
         let angle = prime as f64;
         let radius = prime as f64 * scale;
         
@@ -184,14 +282,13 @@ fn main(){
         && y >= center_bias_y * scale
         && y < image_size as f64 + center_bias_y * scale
         {
-			drawn += 1u64;
+			drawn += 1;
 
             let px = (x - center_bias_x * scale) as i32;
             let py = (y - center_bias_y * scale) as i32;
 
-			
-			let pixel = if colored > 1 {
-				match (prime % 10) as u8 {
+			if colored > 1 {
+				pixel = match (prime % 10) as u8 {
 					1 => (0u8, 255u8, 255u8),
 					3 => (255u8, 0u8, 255u8),
 					5 => (255u8, 255u8, 0u8),
@@ -201,23 +298,19 @@ fn main(){
 				}
 			} else if colored == 1 {
 				//colored neighbors - using sorted vector
-				
 				// Binary search to find current prime's position
 				let pos = results.binary_search(&prime).unwrap();
 				
 				let trailing = pos > 0 && results[pos - 1] == prime - 2;
 				let leading = pos < results_length - 1 && results[pos + 1] == prime + 2;
 
-				match (trailing, leading) {
-					(true, true) => (0u8, 0u8, 255u8),   // both neighbors - blue
+				pixel = match (trailing, leading) {
 					(true, false) => (0u8, 255u8, 0u8),  // trailing only - green
 					(false, true) => (255u8, 0u8, 0u8),  // leading only - red
-					_ => (50u8, 50u8, 50u8)           // no neighbors - grey
+					_ => (50u8, 50u8, 50u8)           // no neighbors, or both neighbours - grey
 				}
 
-			} else {
-				(255u8, 255u8, 255u8)
-			};
+			}
 
 			if pixel_grow == 1.0 && pixel_fixed_size == 1.0 {
 				img.put_pixel(px as u32, py as u32, Rgb([pixel.0, pixel.1, pixel.2]));
@@ -268,8 +361,10 @@ fn main(){
         }
     }
 	
+
 	let filename = format!("{}K_primes_{}_rad_{}_grow_{}_color_{}_x_{}_y_{}.png",
 	image_size/1000, drawn, max_radius, pixel_grow, colored, center_bias_x, center_bias_y);
 	img.save(&filename).expect("Failed to save image");
-	println!("Saved polar plot to {}", filename);
+	println!("Drawn {} points in {}s", drawn, start_draw_time.elapsed().as_secs_f64());
+	println!("Saved as {}", filename);
 }
