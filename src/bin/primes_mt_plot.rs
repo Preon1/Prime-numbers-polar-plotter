@@ -1,5 +1,6 @@
+use std::f64::consts::PI;
 use std::time::Instant;
-use std::thread;
+use std::{f64, thread};
 use std::sync::{Arc, Mutex};
 use image::{ImageBuffer, Rgb};
 use clap::Parser;
@@ -9,55 +10,97 @@ use clap::Parser;
 #[command(name = "primes_mt_plot")]
 #[command(about = "Multi-threaded prime number polar plot generator", long_about = None)]
 struct Args {
-    /// Time limit in seconds for prime generation
-    #[arg(short = 'l', long, default_value_t = 600.0)]
-    time_limit: f64,
+	/// Time limit in seconds for prime generation
+	#[arg(short = 'l', long, default_value_t = 600.0)]
+	time_limit: f64,
 
-    /// Image size in pixels (width and height)
-    #[arg(short = 's', long, default_value_t = 1000)]
-    image_size: u32,
+	/// Image size in pixels (width and height)
+	#[arg(short = 's', long, default_value_t = 1000)]
+	image_size: u32,
 
-    /// Maximum radius for the polar plot
-    #[arg(short = 'r', long, default_value_t = 100000.0)]
-    max_radius: f64,
+	/// Maximum radius for the polar plot
+	#[arg(short = 'r', long, default_value_t = 100000.0)]
+	max_radius: f64,
 
-    /// Pixel growth factor based on distance
-    #[arg(short = 'g', long, default_value_t = 5.0)]
-    pixel_grow: f64,
+	/// Pixel growth factor based on distance
+	#[arg(short = 'g', long, default_value_t = 5.0)]
+	pixel_grow: f64,
 
-    /// Number of threads (0 = auto-detect)
-    #[arg(short = 't', long, default_value_t = 0)]
-    threads: usize,
+	/// Number of threads (0 = auto-detect)
+	#[arg(short = 't', long, default_value_t = 0)]
+	threads: usize,
 
-    /// Coloring mode: 0=white, 1=paired neighbors, 2+=by last digit
-    #[arg(short = 'c', long, default_value_t = 0)]
-    colored: i8,
+	/// Coloring mode: 0=white, 1=paired neighbors, 2+=by last digit
+	#[arg(short = 'c', long, default_value_t = 0)]
+	colored: i8,
 
-    /// Center bias X coordinate
-    #[arg(short = 'x', long, default_value_t = 0.0, allow_hyphen_values=true)]
-    center_bias_x: f64,
+	/// Center bias X coordinate
+	#[arg(short = 'x', long, default_value_t = 0.0, allow_hyphen_values=true)]
+	center_bias_x: f64,
 
-    /// Center bias Y coordinate
-    #[arg(short = 'y', long, default_value_t = 0.0, allow_hyphen_values=true)]
-    center_bias_y: f64,
+	/// Center bias Y coordinate
+	#[arg(short = 'y', long, default_value_t = 0.0, allow_hyphen_values=true)]
+	center_bias_y: f64,
 
-    /// Fixed pixel size (overrides pixel_grow when != 1.0)
-    #[arg(short = 'f', long, default_value_t = 1.0)]
-    pixel_fixed_size: f64,
+	/// Fixed pixel size (overrides pixel_grow when != 1.0)
+	#[arg(short = 'f', long, default_value_t = 1.0)]
+	pixel_fixed_size: f64,
 }
 
 
-fn pretty_print_int(i: usize) -> String {
-    let mut s = String::new();
-    let i_str = i.to_string();
-    let a = i_str.chars().rev().enumerate();
-    for (idx, val) in a {
-        if idx != 0 && idx % 3 == 0 {
-            s.insert(0, ' ');
-        }
-        s.insert(0, val);
+const TWO_PI: f64 = 2.0 * PI;
+
+fn norm_angle(a: f64) -> f64 {
+    a.rem_euclid(TWO_PI) // always in [0, 2π)
+}
+
+/// Next representable f64 toward +∞ (1 ULP up), without losing precision.
+fn next_up(x: f64) -> f64 {
+    if x.is_nan() || x == f64::INFINITY {
+        return x;
     }
-    s
+    // Handle both +0.0 and -0.0
+    if x == 0.0 {
+        return f64::from_bits(1); // smallest positive subnormal
+    }
+    let b = x.to_bits();
+    // For positive numbers, increment bits; for negative numbers, decrement bits.
+    if x > 0.0 {
+        f64::from_bits(b + 1)
+    } else {
+        f64::from_bits(b - 1)
+    }
+}
+
+/// Next representable f64 toward -∞ (1 ULP down), without losing precision.
+fn next_down(x: f64) -> f64 {
+    if x.is_nan() || x == f64::NEG_INFINITY {
+        return x;
+    }
+    if x == 0.0 {
+        // most negative subnormal
+        return f64::from_bits(1u64 << 63 | 1);
+    }
+    let b = x.to_bits();
+    // For positive numbers, decrement bits; for negative numbers, increment bits.
+    if x > 0.0 {
+        f64::from_bits(b - 1)
+    } else {
+        f64::from_bits(b + 1)
+    }
+}
+
+fn pretty_print_int(i: usize) -> String {
+	let mut s = String::new();
+	let i_str = i.to_string();
+	let a = i_str.chars().rev().enumerate();
+	for (idx, val) in a {
+		if idx != 0 && idx % 3 == 0 {
+			s.insert(0, ' ');
+		}
+		s.insert(0, val);
+	}
+	s
 }
 
 
@@ -154,7 +197,7 @@ fn get_calculation_ring(
 	let end = (max_dist.ceil() as usize).max(start);
 
 	println!(
-		"Calculation boundaries: start={}, end={} (cx={}, cy={}, h={}, scale={})",
+		"Ring boundaries: start={}, end={} (cx={}, cy={}, h={}, scale={})",
 		pretty_print_int(start),
 		pretty_print_int(end),
 		pretty_print_int(cx as usize),
@@ -167,8 +210,86 @@ fn get_calculation_ring(
 }
 
 
+fn get_radian(x: &f64, y: &f64) -> f64 {
+    norm_angle(y.atan2(*x))
+}
 
-fn main(){
+fn angle_in_arc(angle: f64, arc_min: f64, arc_max: f64) -> bool {
+    // Supports wrap-around when arc_min > arc_max
+    if arc_min <= arc_max {
+        angle >= arc_min && angle <= arc_max
+    } else {
+        angle >= arc_min || angle <= arc_max
+    }
+}
+
+/// returns min and max arc in radians and if square (viewport) contains origin (0,0)
+fn get_calculation_arc(
+    scale: &f64,
+    offset_x_px: &f64,
+    offset_y_px: &f64,
+    half_size_px: &f64,
+) -> (f64, f64, bool) {
+    // Keep sign consistent with get_calculation_ring() and your drawing center_bias usage.
+    let cx = -offset_x_px / scale;
+    let cy = -offset_y_px / scale;
+    let h = -half_size_px / scale;
+
+    // True "origin is displayed" test: origin inside the viewport AABB in world coords
+    let origin_is_displayed = cx.abs() <= h && cy.abs() <= h;
+    if origin_is_displayed {
+        println!("Arc boundaries: None (origin inside viewport)");
+        return (0.0, TWO_PI, true);
+    }
+
+    let square = [
+        [cx - h, cy - h],
+        [cx - h, cy + h],
+        [cx + h, cy + h],
+        [cx + h, cy - h],
+    ];
+
+    for (i, v) in square.iter().enumerate() {
+        println!("Viewport corner {}: {};{}", i + 1, v[0], v[1]);
+    }
+
+    let mut angles: Vec<f64> = square.iter().map(|v| get_radian(&v[0], &v[1])).collect();
+    angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    // Largest-gap method (robust wrap handling via rem_euclid)
+    let mut max_gap = -1.0_f64;
+    let mut max_gap_idx = 0usize;
+
+    for i in 0..angles.len() {
+        let a = angles[i];
+        let b = angles[(i + 1) % angles.len()];
+        let gap = (b - a).rem_euclid(TWO_PI); // always >= 0, wrap-safe
+        if gap > max_gap {
+            max_gap = gap;
+            max_gap_idx = i;
+        }
+    }
+
+    // Minimal covering arc is the complement of the largest gap:
+    // start right after the largest gap, end at the start of the gap.
+    let mut arc_min = angles[(max_gap_idx + 1) % angles.len()];
+    let mut arc_max = angles[max_gap_idx];
+
+    // Expand by 1 ULP so comparisons don't miss points exactly on the boundary.
+    // This keeps full f64 resolution (no coarse epsilon).
+    arc_min = norm_angle(next_down(arc_min));
+    arc_max = norm_angle(next_up(arc_max));
+
+    if arc_min <= arc_max {
+        println!("Arc boundaries: {}-{}", arc_min, arc_max);
+    } else {
+        println!("Arc boundaries (wrap): {}-{} (wraps over 0)", arc_min, arc_max);
+    }
+
+    (arc_min, arc_max, false)
+}
+
+fn main() {
 	let args = Args::parse();
 
 	let time_limit = args.time_limit;
@@ -188,6 +309,12 @@ fn main(){
 	let boundaries = get_calculation_ring(&scale, &center_bias_x, &center_bias_y, &half_size_px);
 	let calc_start = boundaries[0];
 	let draw_radius = boundaries[1];
+
+	let arc_boundaries = get_calculation_arc(&scale, &center_bias_x, &center_bias_y, &half_size_px);
+	let calc_arc_min = arc_boundaries.0;
+	let calc_arc_max = arc_boundaries.1;
+	let origin_is_displayed = arc_boundaries.2;
+
 
 	let num_threads = if threads == 0 {
 		thread::available_parallelism().unwrap().get()
@@ -212,16 +339,34 @@ fn main(){
 			let mut n = calc_start + 2 * i;
 			
 			let start_time_clone = Instant::now();
-			while start_time_clone.elapsed().as_secs_f64() < time_limit {
-				if is_prime(&n) {
-					primes.push(n);
+
+			if origin_is_displayed {
+				while start_time_clone.elapsed().as_secs_f64() < time_limit {
+					if is_prime(&n) {
+						primes.push(n);
+					}
+	
+					n += step;
+	
+					if n > draw_radius{ break; }
 				}
+			}else{
+				while start_time_clone.elapsed().as_secs_f64() < time_limit {
+					let n_rad: f64 = (n as f64).rem_euclid(TWO_PI);
 
-				n += step;
+					if angle_in_arc(n_rad, calc_arc_min, calc_arc_max) {
+						if is_prime(&n) {
+							primes.push(n);
+						}
+					}
 
-				if n > draw_radius{ break; }
+					n += step;
+	
+					if n > draw_radius{ break; }
+				}
 			}
-			
+
+
 			let mut results = results_clone.lock().unwrap();
 			results.extend(primes);
 		});
@@ -249,7 +394,6 @@ fn main(){
 	);
 
 
-
 	// if to display colored pairs - presort results vector
 	if colored == 1 {
 		println!("Sorting...");
@@ -270,22 +414,22 @@ fn main(){
 	let start_draw_time = Instant::now();
 
 	for &prime in results.iter() {
-        let angle = prime as f64;
-        let radius = prime as f64 * scale;
-        
-        let x = center_x + radius * angle.cos();
-        let y = center_y + radius * angle.sin();
-        
-        if 
-        x >= center_bias_x * scale
-        && x < image_size as f64 + center_bias_x * scale
-        && y >= center_bias_y * scale
-        && y < image_size as f64 + center_bias_y * scale
-        {
+		let angle = prime as f64;
+		let radius = angle * scale;
+		
+		let x = center_x + radius * angle.cos();
+		let y = center_y + radius * angle.sin();
+		
+		if 
+		x >= center_bias_x * scale
+		&& x < image_size as f64 + center_bias_x * scale
+		&& y >= center_bias_y * scale
+		&& y < image_size as f64 + center_bias_y * scale
+		{
 			drawn += 1;
 
-            let px = (x - center_bias_x * scale) as i32;
-            let py = (y - center_bias_y * scale) as i32;
+			let px = (x - center_bias_x * scale) as i32;
+			let py = (y - center_bias_y * scale) as i32;
 
 			if colored > 1 {
 				pixel = match (prime % 10) as u8 {
@@ -316,36 +460,36 @@ fn main(){
 				img.put_pixel(px as u32, py as u32, Rgb([pixel.0, pixel.1, pixel.2]));
 				continue;
 			}
-            
-            // Calculate point size based on distance from center
-            let distance_ratio = radius / (image_size as f64 / 2.0);
-            let point_radius = if pixel_fixed_size == 1.0 {
+			
+			// Calculate point size based on distance from center
+			let distance_ratio = radius / (image_size as f64 / 2.0);
+			let point_radius = if pixel_fixed_size == 1.0 {
 				distance_ratio * pixel_grow
 			}else{
 				pixel_fixed_size
 			};
-            
-            // Draw circular point with gradient
-            let r_int = point_radius.ceil() as i32;
-            
-            for dx in -r_int..=r_int {
-                for dy in -r_int..=r_int {
-                    let dist_from_point = ((dx * dx + dy * dy) as f64).sqrt();
-                    
-                    if dist_from_point <= point_radius {
-                        // Calculate intensity: 1.0 at center, fades to 0.0 at edge
+			
+			// Draw circular point with gradient
+			let r_int = point_radius.ceil() as i32;
+			
+			for dx in -r_int..=r_int {
+				for dy in -r_int..=r_int {
+					let dist_from_point = ((dx * dx + dy * dy) as f64).sqrt();
+					
+					if dist_from_point <= point_radius {
+						// Calculate intensity: 1.0 at center, fades to 0.0 at edge
 
-                        let intensity = 1.0 - (dist_from_point / point_radius);
-                        let brightness = (
+						let intensity = 1.0 - (dist_from_point / point_radius);
+						let brightness = (
 							(intensity * pixel.0 as f64) as u8,
 							(intensity * pixel.1 as f64) as u8,
 							(intensity * pixel.2 as f64) as u8,
 						);
-                        
-                        let nx = px + dx;
-                        let ny = py + dy;
-                        if nx >= 0 && nx < image_size as i32 && ny >= 0 && ny < image_size as i32 {
-                            let current = img.get_pixel(nx as u32, ny as u32);
+						
+						let nx = px + dx;
+						let ny = py + dy;
+						if nx >= 0 && nx < image_size as i32 && ny >= 0 && ny < image_size as i32 {
+							let current = img.get_pixel(nx as u32, ny as u32);
 							let new_brightness = (
 								current[0].max(brightness.0),
 								current[1].max(brightness.1),
@@ -353,13 +497,13 @@ fn main(){
 							);
 
 							img.put_pixel(nx as u32, ny as u32, Rgb([new_brightness.0, new_brightness.1, new_brightness.2]));
-                        }
-                    }
-                }
-            }
-            
-        }
-    }
+						}
+					}
+				}
+			}
+			
+		}
+	}
 	
 
 	let filename = format!("{}K_primes_{}_rad_{}_grow_{}_color_{}_x_{}_y_{}.png",
