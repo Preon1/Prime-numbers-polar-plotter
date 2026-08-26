@@ -238,11 +238,14 @@ fn angle_in_arc(angle: f64, arc_min: f64, arc_max: f64) -> bool {
 }
 
 /// returns min and max arc in radians and if square (viewport) contains origin (0,0)
+/// `force_sector` skips the full-circle shortcut below, forcing a (possibly incomplete)
+/// corner-based sector even when the origin is inside the viewport.
 fn get_calculation_arc(
     scale: &f64,
     offset_x_px: &f64,
     offset_y_px: &f64,
     half_size_px: &f64,
+    force_sector: bool,
 ) -> (f64, f64, bool) {
     // Keep sign consistent with get_calculation_ring() and your drawing center_bias usage.
     let cx = offset_x_px / scale;
@@ -251,7 +254,7 @@ fn get_calculation_arc(
 
     // True "origin is displayed" test: origin inside the viewport AABB in world coords
     let origin_is_displayed = cx.abs() <= h && cy.abs() <= h;
-    if origin_is_displayed {
+    if origin_is_displayed && !force_sector {
         println!("Arc boundaries: None (origin inside viewport)");
         return (0.0, TWO_PI, true);
     }
@@ -324,7 +327,8 @@ fn main() {
 	let calc_start = boundaries[0];
 	let draw_radius = boundaries[1];
 
-	let arc_boundaries = get_calculation_arc(&scale, &center_bias_x, &center_bias_y, &half_size_px);
+	let force_sector = args.ring_mode == RingMode::Off;
+	let arc_boundaries = get_calculation_arc(&scale, &center_bias_x, &center_bias_y, &half_size_px, force_sector);
 	let calc_arc_min = arc_boundaries.0;
 	let calc_arc_max = arc_boundaries.1;
 	let origin_is_displayed = arc_boundaries.2;
