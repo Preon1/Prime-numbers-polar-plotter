@@ -3,8 +3,18 @@ use std::time::Instant;
 use std::{f64, thread};
 use std::sync::{Arc, Mutex};
 use image::{ImageBuffer, Rgb};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+enum RingMode {
+	/// Enable full ring (no angular sector skipping) when origin is in viewport or twin-coloring is used
+	Auto,
+	/// Always use sector mode, never fall back to full ring, even with twin-coloring
+	Off,
+	/// Always use full ring, regardless of viewport or coloring mode
+	On,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "primes_mt_plot")]
@@ -45,6 +55,10 @@ struct Args {
 	/// Fixed pixel size (overrides pixel_grow when != 1.0)
 	#[arg(short = 'f', long, default_value_t = 1.0)]
 	pixel_fixed_size: f64,
+
+	/// Ring mode: auto=full ring when origin is visible or colored=1, off=always sector mode, on=always full ring
+	#[arg(short = 'm', long, value_enum, default_value_t = RingMode::Auto)]
+	ring_mode: RingMode,
 }
 
 
@@ -231,9 +245,9 @@ fn get_calculation_arc(
     half_size_px: &f64,
 ) -> (f64, f64, bool) {
     // Keep sign consistent with get_calculation_ring() and your drawing center_bias usage.
-    let cx = -offset_x_px / scale;
-    let cy = -offset_y_px / scale;
-    let h = -half_size_px / scale;
+    let cx = offset_x_px / scale;
+    let cy = offset_y_px / scale;
+    let h = half_size_px / scale;
 
     // True "origin is displayed" test: origin inside the viewport AABB in world coords
     let origin_is_displayed = cx.abs() <= h && cy.abs() <= h;
@@ -315,6 +329,27 @@ fn main() {
 	let calc_arc_max = arc_boundaries.1;
 	let origin_is_displayed = arc_boundaries.2;
 
+	// Ring mode calculates the full radial ring (no angular sector skipping), which is required
+	// when the origin is in view (sector method would leave a big unscanned gap) and when
+	// twin-prime coloring is used (a prime's pair can lie far outside the sector).
+	// `off` and `on` are explicit overrides that always win over the origin/coloring auto-detection.
+	let ring_mode_active = match args.ring_mode {
+		RingMode::Off => false,
+		RingMode::On => true,
+		RingMode::Auto => origin_is_displayed || colored == 1,
+	};
+
+	if ring_mode_active {
+		let reason = match args.ring_mode {
+			RingMode::On => "forced by --ring-mode on",
+			_ if origin_is_displayed => "origin is in viewport",
+			_ => "colored=1 (twin primes)",
+		};
+		println!("Ring mode: ON ({})", reason);
+	} else {
+		println!("Ring mode: OFF (sector mode)");
+	}
+
 
 	let num_threads = if threads == 0 {
 		thread::available_parallelism().unwrap().get()
@@ -340,7 +375,7 @@ fn main() {
 			
 			let start_time_clone = Instant::now();
 
-			if origin_is_displayed {
+			if ring_mode_active {
 				while start_time_clone.elapsed().as_secs_f64() < time_limit {
 					if is_prime(&n) {
 						primes.push(n);
@@ -407,8 +442,11 @@ fn main() {
 	
 	let mut img = ImageBuffer::from_pixel(image_size, image_size, Rgb([0u8, 0u8, 0u8]));
 
-	let center_x = image_size as f64 / 2.0 + center_bias_x;
-	let center_y = image_size as f64 / 2.0 + center_bias_y;
+	// center_bias is subtracted (not added) here to match the world<->pixel convention used by
+	// get_calculation_ring()/get_calculation_arc(), where offset_x_px/offset_y_px map directly
+	// (unnegated) to the viewport's world-space center. x/y below then land directly in [0, image_size).
+	let center_x = image_size as f64 / 2.0 - center_bias_x;
+	let center_y = image_size as f64 / 2.0 - center_bias_y;
 	let mut pixel = (255u8, 255u8, 255u8);
 	let mut drawn = 0;
 	let start_draw_time = Instant::now();
@@ -421,15 +459,15 @@ fn main() {
 		let y = center_y + radius * angle.sin();
 		
 		if 
-		x >= center_bias_x * scale
-		&& x < image_size as f64 + center_bias_x * scale
-		&& y >= center_bias_y * scale
-		&& y < image_size as f64 + center_bias_y * scale
+		x >= 0.0
+		&& x < image_size as f64
+		&& y >= 0.0
+		&& y < image_size as f64
 		{
 			drawn += 1;
 
-			let px = (x - center_bias_x * scale) as i32;
-			let py = (y - center_bias_y * scale) as i32;
+			let px = x as i32;
+			let py = y as i32;
 
 			if colored > 1 {
 				pixel = match (prime % 10) as u8 {

@@ -59,6 +59,20 @@ All arguments use named flags with short and long forms:
 | `-x` | `--center-bias-x` | `0.0` | Horizontal center shift in pixels |
 | `-y` | `--center-bias-y` | `0.0` | Vertical center shift in pixels |
 | `-f` | `--pixel-fixed-size` | `1.0` | Fixed pixel size (overrides pixel-grow when != 1.0) |
+| `-m` | `--ring-mode` | `auto` | Ring calculation mode: `auto`, `off`, or `on` (see below) |
+
+#### Ring Mode (`--ring-mode`):
+
+By default, the program only calculates primes within the angular sector ("cone") that covers the viewport, skipping everything else for performance. This breaks down in two situations:
+
+1. **Origin in viewport**: if the point zero is visible on screen, the sector approach leaves a large, incorrectly empty region since there is no single narrow cone that covers a viewport containing the origin.
+2. **Twin prime coloring** (`--colored 1`): a prime's neighbor (p-2 or p+2) can lie far outside the calculated sector, so pairs get miscategorized as having no neighbor.
+
+Ring mode solves this by calculating the **full radial ring** (all angles) instead of a narrow sector, while still skipping numbers closer to zero than the viewport's inner boundary. Three modes are available:
+
+- **`auto`** (default): automatically enables full ring calculation when the origin is inside the viewport, or when `--colored 1` is used. Otherwise uses the faster sector mode.
+- **`off`**: always uses sector mode, even if origin is visible or twin-pair coloring is selected (fastest, but can produce the artifacts described above). This always overrides the `--colored 1` auto-detection.
+- **`on`**: always uses full ring calculation, regardless of viewport position or coloring mode (slowest, but always correct).
 
 #### Color Modes (`--colored`):
 - **0**: White/monochrome - all points white
@@ -145,11 +159,12 @@ Example: `1K_primes_78498_rad_100000_grow_5_color_0_x_0_y_0.png`
 
 ## How It Works
 
-1. **Prime Finding**: The program distributes odd numbers across multiple threads, each checking for primality using trial division up to the square root
-2. **Time Management**: Each thread monitors elapsed time and stops when the time limit is reached or all necessary primes are found
-3. **Result Aggregation**: All threads contribute their found primes to a shared, mutex-protected vector
-4. **Visualization**: Each prime `p` is plotted at polar coordinates (angle=p, radius=p×scale), adjusted by center bias
-5. **Gradient Rendering**: Points are drawn with gradient fade (unless using fixed-size mode), with size increasing based on distance from origin or fixed size
+1. **Viewport Bounding**: The program computes the radial range (and, unless in ring mode, the angular sector) that covers the visible viewport, so only primes that could actually be drawn are calculated
+2. **Prime Finding**: The program distributes odd numbers across multiple threads, each checking for primality using trial division up to the square root
+3. **Time Management**: Each thread monitors elapsed time and stops when the time limit is reached or all necessary primes are found
+4. **Result Aggregation**: All threads contribute their found primes to a shared, mutex-protected vector
+5. **Visualization**: Each prime `p` is plotted at polar coordinates (angle=p, radius=p×scale), adjusted by center bias
+6. **Gradient Rendering**: Points are drawn with gradient fade (unless using fixed-size mode), with size increasing based on distance from origin or fixed size
 
 ## Performance Notes
 
@@ -159,6 +174,7 @@ Example: `1K_primes_78498_rad_100000_grow_5_color_0_x_0_y_0.png`
 - Setting `--pixel-grow 1.0` or using `--pixel-fixed-size` speeds up image generation
 - Generated PNG images can generally be opened up to 32K-40K resolution. Larger images need specialized software like "vipsdisp"
 - Best visual results: Bigger max_radius → bigger image size → smaller pixel_grow (down to 1)
+- Sector mode (the default when the origin is off-screen and `--colored` is not `1`) skips most of the number range and is much faster for zoomed-in, off-center views. Ring mode (see `--ring-mode`) trades this speed for correctness when the origin is visible or twin-pair coloring is used
 
 ## Mathematical Background
 
