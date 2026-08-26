@@ -59,6 +59,10 @@ struct Args {
 	/// Ring mode: auto=full ring when origin is visible or colored=1, off=always sector mode, on=always full ring
 	#[arg(short = 'm', long, value_enum, default_value_t = RingMode::Auto)]
 	ring_mode: RingMode,
+
+	/// Output image path or filename (overrides the generated filename)
+	#[arg(short = 'o', long)]
+	file: Option<String>,
 }
 
 
@@ -548,8 +552,10 @@ fn main() {
 	}
 	
 
-	let filename = format!("{}K_primes_{}_rad_{}_grow_{}_color_{}_x_{}_y_{}.png",
-	image_size/1000, drawn, max_radius, pixel_grow, colored, center_bias_x, center_bias_y);
+	let filename = args.file.unwrap_or_else(|| format!(
+		"{}K_primes_{}_rad_{}_grow_{}_color_{}_x_{}_y_{}.png",
+		image_size / 1000, drawn, max_radius, pixel_grow, colored, center_bias_x, center_bias_y,
+	));
 	img.save(&filename).expect("Failed to save image");
 	println!("Drawn {} points in {}s", drawn, start_draw_time.elapsed().as_secs_f64());
 	println!("Saved as {}", filename);

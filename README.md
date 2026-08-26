@@ -60,6 +60,7 @@ All arguments use named flags with short and long forms:
 | `-y` | `--center-bias-y` | `0.0` | Vertical center shift in pixels |
 | `-f` | `--pixel-fixed-size` | `1.0` | Fixed pixel size (overrides pixel-grow when != 1.0) |
 | `-m` | `--ring-mode` | `auto` | Ring calculation mode: `auto`, `off`, or `on` (see below) |
+| `-o` | `--file` | Generated filename | Output image path or filename. Accepts absolute and relative paths and overrides the generated filename. |
 
 #### Ring Mode (`--ring-mode`):
 
@@ -73,6 +74,14 @@ Ring mode solves this by calculating the **full radial ring** (all angles) inste
 - **`auto`** (default): automatically enables full ring calculation when the origin is inside the viewport, or when `--colored 1` is used. Otherwise uses the faster sector mode.
 - **`off`**: always uses sector mode, even if origin is visible or twin-pair coloring is selected (fastest, but can produce the artifacts described above). This always overrides the `--colored 1` auto-detection.
 - **`on`**: always uses full ring calculation, regardless of viewport position or coloring mode (slowest, but always correct).
+
+#### Output File (`--file`):
+
+Use `--file` to write the image to a specific absolute or relative path, or to replace only the generated filename. The path is used as provided and its parent directory must already exist.
+
+```bash
+.\target\release\primes_mt_plot.exe --file images/my-primes.png
+```
 
 #### Color Modes (`--colored`):
 - **0**: White/monochrome - all points white
