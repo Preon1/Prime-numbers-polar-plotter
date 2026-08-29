@@ -5,8 +5,11 @@
 target/flycheck0/**
 target/debug/**
 target/release/.fingerprint/**
-target/release/deps/*.d
-target/release/build/
+target/release/deps/**
+target/release/build/**
+target/release/incremental/**
+target/release/.*
+target/release/.d
 *.TAG
 *rustc_info*
 !*example*.png
