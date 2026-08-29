@@ -1,0 +1,11 @@
+.DS_Store
+*.d
+flycheck0/**
+debug/**
+release/.fingerprint/**
+release/deps/**
+release/build/**
+release/incremental/**
+release/.*
+*.TAG
+*rustc_info*
